@@ -5,7 +5,7 @@ use crossterm::{
 };
 
 use std::{
-    error::Error, io, thread, time::{Duration, Instant}, path::{Path, PathBuf},
+    error::Error, io, time::{Duration, Instant}, path::Path, fs::read_dir,
 };
 
 use tui::{
@@ -17,13 +17,8 @@ use tui::{
     Frame, Terminal,
 };
 
-use sysinfo::{
-    NetworkExt, NetworksExt, 
-    ProcessExt, System, 
-    SystemExt, CpuExt
+use sysinfo::{System, SystemExt, CpuExt
 };
-
-use std::fs::read_dir;
 
 struct StatefulList<T> {
     state: ListState,
@@ -189,7 +184,7 @@ impl<'a> App<'a> {
         paths.filter_map(|entry| {
           entry.ok().and_then(|e|
             e.path().file_name()
-            .and_then(|n| n.to_str().map(|s| String::from(s)))
+            .and_then(|n| n.to_str().map(String::from))
           )
         }).collect::<Vec<String>>();
     
@@ -203,9 +198,8 @@ impl<'a> App<'a> {
               let line = binding.lines().find(|f| f.contains("Name:")).unwrap();
                let output = line.replace("Name:", "").replace("\t", "").replace("/0", "");
                let format = format!("{} {}", filt[i].to_owned(), output.to_owned());
-               let format2 = format!("{}", filt[i].to_owned());
                pid.push(format.to_owned());
-               pnum.push(format2.to_owned());
+               pnum.push(filt[i].to_owned().to_string());
         }
 
         self.pid = StatefulList::with_items(pid);
@@ -298,16 +292,14 @@ let meminfo = format!("Memory Usage: {}Mb / {}Mb", app.mem_used, app.mem_total);
 let host = format!("Host: {}", app.host);
 let distro = format!("Distro: {}", app.distro);
 let process = format!("Running Processes: {}", app.proc);
-let sda = format!("{}",app.hdd1);
-let sdb = format!("{}",app.hdd2);
 let text = vec![
     Spans::from(host),
     Spans::from(distro),
     Spans::from(process),
     Spans::from(meminfo),
     Spans::from("Disk Size"),
-    Spans::from(sda),
-    Spans::from(sdb),
+    Spans::from(app.hdd1.to_string()),
+    Spans::from(app.hdd2.to_string()),
 ];
 
 let create_block = |title| {
@@ -328,7 +320,7 @@ let paragraph = Paragraph::new(text.clone())
 f.render_widget(paragraph, zone3);
 }
 
-fn second_tab<B: Backend>(f: &mut Frame<B>, app: &mut App, zone1: Rect, zone2: Rect, zone3: Rect) {
+fn second_tab<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     let chunks = Layout::default()
     .direction(Direction::Vertical)
     .margin(2)
@@ -369,8 +361,6 @@ fn second_tab<B: Backend>(f: &mut Frame<B>, app: &mut App, zone1: Rect, zone2: R
 }
 
 fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
-    let mut sys = System::new_all();
-
     let size = f.size();
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -409,9 +399,9 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
         );
     f.render_widget(tabs, chunks[0]);
 
-    let inner = match app.index {
+    match app.index {
         0 => first_tab(f, app, chunks[1], chunks[2], chunks[3]),
-        1 => second_tab(f, app, chunks[1], chunks[2], chunks[3]),
+        1 => second_tab(f, app),
         _ => unreachable!(),
     };
 }
