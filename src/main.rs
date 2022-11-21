@@ -295,8 +295,8 @@ let gauge = Gauge::default()
 f.render_widget(gauge, zone2);
 
 let meminfo = format!("Memory Usage: {}Mb / {}Mb", app.mem_used, app.mem_total);
-let host = format!("Host: NotLfs");
-let distro = format!("Distro: SuicidalSquirrel");
+let host = format!("Host: {}", app.host);
+let distro = format!("Distro: {}", app.distro);
 let process = format!("Running Processes: {}", app.proc);
 let sda = format!("{}",app.hdd1);
 let sdb = format!("{}",app.hdd2);
