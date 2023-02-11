@@ -125,17 +125,24 @@ impl<'a> App<'a> {
 
     fn on_tick(&mut self) {
         let mut sys = System::new_all();
+   let meminfo = std::fs::read_to_string("/proc/meminfo").unwrap();
 
-        let meminfo = std::fs::read_to_string("/proc/meminfo").unwrap();
-        let line_one = meminfo.lines().find(|f| f.contains("MemAvailable:")).unwrap();
-         let pretty_one = line_one.replace("MemAvailable:", "").replace(' ', "").replace("kB", "");
-        let line_two = meminfo.lines().find(|f| f.contains("MemTotal:")).unwrap();
-         let pretty_two = line_two.replace("MemTotal:", "").replace(' ', "").replace("kB", "");
-        let total_one: u32 = pretty_one.parse().expect("Oh nuu");
-         let mem_temp = total_one / 1000;
-        let total_two: u32 = pretty_two.parse().expect("Oh nuu");
-         let mem_total = total_two / 1000;
-          let mem_used = mem_total - mem_temp;
+   let (mem_temp, mem_total) = meminfo
+       .lines()
+       .fold((0, 0), |(mem_temp, mem_total), line| {
+           let mut parts = line.split(":");
+           let key = parts.next().expect("Error").trim();
+           let value = parts.next().expect("Error").trim().replace("kB", "");
+           let value = value.trim().parse().ok().unwrap_or(0);
+
+           match key {
+               "MemAvailable" => (value / 1000, mem_total),
+               "MemTotal" => (mem_temp, value / 1000),
+               _ => (mem_temp, mem_total),
+           }
+       });
+
+   let mem_used = mem_total - mem_temp;
            let temp = mem_used * 100;
             let percentage = temp / mem_total;
         self.mem_percentage = percentage;
